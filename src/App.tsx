@@ -114,12 +114,12 @@ export default function App() {
             Stop building clones, start solving pain points.
           </p>
 
-          <form onSubmit={handleSearch} className="relative max-w-xl mx-auto">
+          <form onSubmit={handleSearch} className="relative max-w-xl mx-auto mb-6">
             <input
               type="text"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              placeholder="e.g. Hospital, Education, Supply Chain..."
+              placeholder="e.g. Sports, Fitness, Healthcare, Logistics..."
               className="input-field pr-32 h-14 text-lg shadow-xl shadow-black/5"
             />
             <button
@@ -131,6 +131,18 @@ export default function App() {
               <span>Search</span>
             </button>
           </form>
+
+          <div className="flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
+            {['Sports', 'Fitness', 'Healthcare', 'Education', 'Logistics'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleSearch(cat)}
+                className="px-3 py-1.5 rounded-full bg-white border border-zinc-200 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:border-black hover:text-black transition-all shadow-sm"
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </motion.div>
       </header>
 
