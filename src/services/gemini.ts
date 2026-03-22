@@ -2,6 +2,10 @@ import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+if (!process.env.GEMINI_API_KEY) {
+  console.warn("GEMINI_API_KEY is not set. AI features will not work.");
+}
+
 export interface Problem {
   id: string;
   title: string;
@@ -62,6 +66,61 @@ export async function getDomainTrends(): Promise<DomainTrend[]> {
   }
 }
 
+export interface SearchResult {
+  problems: Problem[];
+  subDomains: string[];
+}
+
+export async function searchDomain(domain: string): Promise<SearchResult> {
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Analyze the "${domain}" domain and provide:
+    1. A list of 5 real-world problems that could be solved with software/AI. Focus on specific, non-obvious pain points.
+    2. A list of 5 specific sub-domains or niches currently seeing innovation.
+    
+    For each problem:
+    - Assign an impactLevel: 'Low', 'Medium', or 'High'.
+    - Determine isAgentSuitable: true if well-suited for an autonomous AI agent.`,
+    config: {
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          problems: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                impact: { type: Type.STRING },
+                impactLevel: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
+                isAgentSuitable: { type: Type.BOOLEAN },
+                domain: { type: Type.STRING },
+              },
+              required: ["id", "title", "description", "impact", "impactLevel", "isAgentSuitable", "domain"],
+            },
+          },
+          subDomains: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          }
+        },
+        required: ["problems", "subDomains"]
+      },
+    },
+  });
+
+  try {
+    return JSON.parse(response.text || '{"problems":[], "subDomains":[]}');
+  } catch (e) {
+    console.error("Failed to parse search results:", e);
+    return { problems: [], subDomains: [] };
+  }
+}
+
 export async function getTrendingProblems(): Promise<Problem[]> {
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -95,65 +154,6 @@ export async function getTrendingProblems(): Promise<Problem[]> {
     return JSON.parse(response.text || "[]");
   } catch (e) {
     console.error("Failed to parse trending problems:", e);
-    return [];
-  }
-}
-
-export async function getSubDomains(domain: string): Promise<string[]> {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: `For the domain "${domain}", identify 5 specific sub-domains or niches that are currently seeing significant innovation or have major unsolved problems. Return only the names of the sub-domains.`,
-    config: {
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING }
-      },
-    },
-  });
-
-  try {
-    return JSON.parse(response.text || "[]");
-  } catch (e) {
-    console.error("Failed to parse sub-domains:", e);
-    return [];
-  }
-}
-
-export async function searchProblems(domain: string): Promise<Problem[]> {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: `Identify 5 real-world problems in the "${domain}" domain that could be solved with a software application. Focus on specific, non-obvious pain points.
-    For each problem:
-    1. Assign an impactLevel: 'Low', 'Medium', or 'High'.
-    2. Determine isAgentSuitable: true if the problem is particularly well-suited for an autonomous AI agent or specialized AI assistant to solve.`,
-    config: {
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            impact: { type: Type.STRING },
-            impactLevel: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
-            isAgentSuitable: { type: Type.BOOLEAN },
-            domain: { type: Type.STRING },
-          },
-          required: ["id", "title", "description", "impact", "impactLevel", "isAgentSuitable", "domain"],
-        },
-      },
-    },
-  });
-
-  try {
-    return JSON.parse(response.text || "[]");
-  } catch (e) {
-    console.error("Failed to parse problems:", e);
     return [];
   }
 }

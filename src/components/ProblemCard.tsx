@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Problem, Solution, generateSolution, searchProblems } from '../services/gemini';
+import { Problem, Solution, generateSolution, searchDomain } from '../services/gemini';
 import { ChevronDown, ChevronUp, Lightbulb, Target, Cpu, Users, Loader2, Share2, Check, Bot, Zap, Bookmark, BookmarkCheck, BarChart2, CheckCircle2, Layers, Code2, Link as LinkIcon, Plus, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -61,9 +61,9 @@ export const ProblemCard: React.FC<ProblemCardProps> = ({ problem, isSaved = fal
       setLoadingRelated(true);
       
       try {
-        const [sol, related] = await Promise.all([
+        const [sol, { problems: related }] = await Promise.all([
           generateSolution(problem),
-          searchProblems(problem.domain)
+          searchDomain(problem.domain)
         ]);
         
         setSolution(sol);

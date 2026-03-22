@@ -1,6 +1,6 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { Search, Globe, Sparkles, Loader2, AlertCircle, TrendingUp, Bookmark, ChevronRight, Bot } from 'lucide-react';
-import { Problem, searchProblems, getTrendingProblems, getDomainTrends, DomainTrend, getSubDomains } from './services/gemini';
+import { Problem, searchDomain, getTrendingProblems, getDomainTrends, DomainTrend } from './services/gemini';
 import { ProblemCard } from './components/ProblemCard';
 import { DomainTrends } from './components/DomainTrends';
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,8 +20,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [isTrending, setIsTrending] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   useEffect(() => {
+    if (!process.env.GEMINI_API_KEY) {
+      setApiKeyMissing(true);
+      setError("Gemini API Key is missing. Please set GEMINI_API_KEY in your environment variables.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (apiKeyMissing) return;
     const loadInitialData = async () => {
       setLoading(true);
       try {
@@ -65,11 +74,14 @@ export default function App() {
     setIsTrending(false);
     if (typeof e === 'string') setDomain(searchTerm);
 
+    if (apiKeyMissing) {
+      setError("Cannot search: Gemini API Key is missing.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const [results, subs] = await Promise.all([
-        searchProblems(searchTerm),
-        getSubDomains(searchTerm)
-      ]);
+      const { problems: results, subDomains: subs } = await searchDomain(searchTerm);
       setProblems(results);
       setSubDomains(subs);
       if (results.length === 0) {
